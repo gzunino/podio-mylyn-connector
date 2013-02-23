@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Mylyn Podio Conector UI
+Bundle-SymbolicName: com.allium.podio.mylyn.ui
+Bundle-Version: 0.0.1.qualifier
+Bundle-Activator: com.allium.podio.mylyn.ui.Activator
+Bundle-Vendor: ALLIUM
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy

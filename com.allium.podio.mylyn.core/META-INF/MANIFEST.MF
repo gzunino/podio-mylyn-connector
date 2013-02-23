@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Mylyn Podio Connector Core
+Bundle-SymbolicName: com.allium.podio.mylyn.core
+Bundle-Version: 0.0.1.qualifier
+Bundle-Activator: com.allium.podio.mylyn.core.Activator
+Bundle-Vendor: ALLIUM
+Require-Bundle: org.eclipse.core.runtime
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-ActivationPolicy: lazy

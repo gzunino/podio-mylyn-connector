@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/com.allium.podio.mylyn.feature_0.0.1.qualifier.jar" id="com.allium.podio.mylyn.feature" version="0.0.1.qualifier">
+      <category name="com.allium.podio.mylyn"/>
+   </feature>
+   <category-def name="com.allium.podio.mylyn" label="Mylyn Podio Connector">
+      <description>
+         A Mylyn Connector for Podio.com
+      </description>
+   </category-def>
+</site>

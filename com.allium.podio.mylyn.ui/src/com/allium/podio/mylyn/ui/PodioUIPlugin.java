@@ -6,18 +6,18 @@ import org.osgi.framework.BundleContext;
 /**
  * The activator class controls the plug-in life cycle
  */
-public class Activator extends AbstractUIPlugin {
+public class PodioUIPlugin extends AbstractUIPlugin {
 
 	// The plug-in ID
 	public static final String PLUGIN_ID = "com.allium.podio.mylyn.ui"; //$NON-NLS-1$
 
 	// The shared instance
-	private static Activator plugin;
+	private static PodioUIPlugin plugin;
 	
 	/**
 	 * The constructor
 	 */
-	public Activator() {
+	public PodioUIPlugin() {
 	}
 
 	/*
@@ -43,7 +43,7 @@ public class Activator extends AbstractUIPlugin {
 	 *
 	 * @return the shared instance
 	 */
-	public static Activator getDefault() {
+	public static PodioUIPlugin getDefault() {
 		return plugin;
 	}
 

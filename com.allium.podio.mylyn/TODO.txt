@@ -1,0 +1,10 @@
+- UI configPage to map status and status values to custom field
+- map to mylyn description, status, estimate, active...
+- Task types from app item name
+- TaskId useless
+- Syncronization
+- Post
+- Editor
+- complete filter types queryPage
+- Reports from querys
+- Javadoc, replace @author

@@ -1,10 +1,22 @@
-- UI configPage to map status and status values to custom field
-- map to mylyn description, status, estimate, active...
+-- Improvements
+- complete filter types queryPage
+*- use mylyn RepositoryClientManager 
+- progress when performQuery
 - Task types from app item name
 - TaskId useless
+- Javadoc, replace @author
+- remove user/pass from tests
+
+-- Features
+- UI configPage to map status and status values to custom field
+- map to mylyn description, status, estimate, active...
 - Syncronization
 - Post
 - Editor
-- complete filter types queryPage
+- Include podio tasks as mylyn subtasks
+- Filter for belongs-to relations (devtask from a sprint)
+- Group by kind of organization, stories as categories (no editor) or parent-tasks (editor)
 - Reports from querys
-- Javadoc, replace @author
+- cache client
+- implement getTaskHistory based on podio revisions
+- implement getTaskRelations

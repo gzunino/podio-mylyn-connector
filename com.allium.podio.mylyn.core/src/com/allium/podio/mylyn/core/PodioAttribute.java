@@ -29,9 +29,10 @@ public enum PodioAttribute {
 
 	CHANGED_ON(Key.CHANGED_ON, "Last Modification", TaskAttribute.DATE_MODIFICATION, TaskAttribute.TYPE_DATE, Flag.READ_ONLY),
 	CHANGED_BY(Key.CHANGED_BY, "Modified By", TaskAttribute.USER_ASSIGNED, TaskAttribute.TYPE_PERSON, Flag.READ_ONLY),
-	
-	SUMMARY(Key.SUMMARY, "Summary", TaskAttribute.SUMMARY, TaskAttribute.TYPE_LONG_RICH_TEXT),
-	DESCRIPTION(Key.TITLE, "Description", TaskAttribute.DESCRIPTION, TaskAttribute.TYPE_LONG_RICH_TEXT),
+
+	TITLE(Key.TITLE, "Summary", TaskAttribute.SUMMARY, TaskAttribute.TYPE_LONG_RICH_TEXT),
+	DESCRIPTION(Key.SUMMARY, "Description", TaskAttribute.DESCRIPTION,
+			TaskAttribute.TYPE_LONG_RICH_TEXT),
 
 	ID(Key.ID, "ID:", TaskAttribute.TASK_KEY, TaskAttribute.TYPE_SHORT_TEXT, Flag.PEOPLE),
 
@@ -40,8 +41,9 @@ public enum PodioAttribute {
 	RATING(Key.RATING, "Priority", TaskAttribute.PRIORITY, TaskAttribute.TYPE_SINGLE_SELECT, Flag.ATTRIBUTE),
 
 	TYPE(Key.TYPE, "Type", TaskAttribute.TASK_KIND, TaskAttribute.TYPE_SINGLE_SELECT, Flag.ATTRIBUTE),
-	LINK(Key.LINK, "lINK", TaskAttribute.TASK_URL, TaskAttribute.TYPE_URL, Flag.ATTRIBUTE);
-	
+	LINK(Key.LINK, "Link", TaskAttribute.TASK_URL, TaskAttribute.TYPE_URL, Flag.ATTRIBUTE,
+			Flag.READ_ONLY);
+
 	static Map<String, PodioAttribute> attributeByTracKey = new HashMap<String, PodioAttribute>();
 
 	static Map<String, String> tracKeyByTaskKey = new HashMap<String, String>();
@@ -56,7 +58,7 @@ public enum PodioAttribute {
 
 	private EnumSet<Flag> flags;
 
-	public static PodioAttribute getByTaskKey(String taskKey) {
+	public static PodioAttribute getByTaskKey(final String taskKey) {
 		for (PodioAttribute attribute : values()) {
 			if (taskKey.equals(attribute.getTaskKey())) {
 				return attribute;
@@ -65,7 +67,7 @@ public enum PodioAttribute {
 		return null;
 	}
 
-	public static PodioAttribute getByTracKey(String tracKey) {
+	public static PodioAttribute getByTracKey(final String tracKey) {
 		for (PodioAttribute attribute : values()) {
 			if (tracKey.equals(attribute.getPodioKey())) {
 				return attribute;
@@ -74,7 +76,7 @@ public enum PodioAttribute {
 		return null;
 	}
 
-	PodioAttribute(Key tracKey, String prettyName, String taskKey, String type, Flag firstFlag, Flag... moreFlags) {
+	PodioAttribute(final Key tracKey, final String prettyName, final String taskKey, final String type, final Flag firstFlag, final Flag... moreFlags) {
 		this.podioKey = tracKey.getKey();
 		this.taskKey = taskKey;
 		this.prettyName = prettyName;
@@ -86,7 +88,7 @@ public enum PodioAttribute {
 		}
 	}
 
-	PodioAttribute(Key tracKey, String prettyName, String taskKey, String type) {
+	PodioAttribute(final Key tracKey, final String prettyName, final String taskKey, final String type) {
 		this(tracKey, prettyName, taskKey, type, null);
 	}
 
@@ -121,11 +123,11 @@ public enum PodioAttribute {
 	}
 
 	public enum Key {
-		CREATED_ON("createdOn"), CREATED_BY("createdBy"), CHANGED_ON("changedOn"), CHANGED_BY("changedby"),  
+		CREATED_ON("createdOn"), CREATED_BY("createdBy"), CHANGED_ON("changedOn"), CHANGED_BY("changedby"),
 		TITLE("title"), ID("id"), TAGS("tags"), LINK("link"), RATING("rating"), COMMENTS("comments"),
 		TYPE("type"), SUMMARY("summary");
-		
-		public static Key fromKey(String name) {
+
+		public static Key fromKey(final String name) {
 			for (Key key : Key.values()) {
 				if (key.getKey().equals(name)) {
 					return key;
@@ -136,7 +138,7 @@ public enum PodioAttribute {
 
 		private String key;
 
-		Key(String key) {
+		Key(final String key) {
 			this.key = key;
 		}
 

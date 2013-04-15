@@ -12,6 +12,7 @@ Require-Bundle: org.eclipse.core.runtime,
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
 Export-Package: com.allium.podio.mylyn.core,
+ com.podio,
  com.podio.app,
  com.podio.filter,
  com.podio.item,
@@ -42,3 +43,4 @@ Bundle-ClassPath: .,
  lib/org.eclipse.jetty.util_8.1.4.v20120524.jar,
  lib/org.jvnet.mimepull_1.4.0.jar,
  lib/stax.api_1.0.1.jar
+Import-Package: com.allium.podio.mylyn.core

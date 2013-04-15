@@ -2,6 +2,7 @@ package com.allium.podio.mylyn.core;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import org.eclipse.mylyn.tasks.core.data.TaskAttributeMapper;
 import org.eclipse.mylyn.tasks.core.data.TaskAttributeMetaData;
 import org.eclipse.mylyn.tasks.core.data.TaskCommentMapper;
 import org.eclipse.mylyn.tasks.core.data.TaskData;
+import org.joda.time.DateTime;
 
 import com.podio.app.ApplicationField;
 import com.podio.app.ApplicationFieldType;
@@ -36,12 +38,16 @@ import com.podio.item.Item;
 
 public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 
-	private static final String PODIO_KEY = "podio_key";
+	private static final String PODIO_KEY = "podio.key";
+	private static final String PODIO_TYPE = "podio.type";
+	private static final String ATTR_PREFIX = "podio.field.";
+	private PodioRepositoryConnector connector;
 
-	public PodioTaskDataHandler(PodioRepositoryConnector repository) {
+	public PodioTaskDataHandler(final PodioRepositoryConnector repository) {
+		this.connector = repository;
 	}
 
-	public TaskData getTaskData(TaskRepository repository, String taskId, IProgressMonitor monitor)
+	public TaskData getTaskData(final TaskRepository repository, final String taskId, IProgressMonitor monitor)
 			throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		try {
@@ -52,22 +58,22 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 		}
 	}
 
-	public TaskData downloadTaskData(TaskRepository repository, int taskId, IProgressMonitor monitor)
+	public TaskData downloadTaskData(final TaskRepository repository, final int taskId, final IProgressMonitor monitor)
 			throws CoreException {
-		PodioClient client = PodioClient.getClient(repository);
-		Item item;
+		PodioClient client = connector.getClientManager().getClient(repository);
 		try {
-			item = client.getItem(taskId);
+			Item item = client.getItem(taskId, true);
+			return createTaskDataFromItem(client, repository, item.getApplication().getId(), item,
+					monitor);
 		} catch (OperationCanceledException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new CoreException(PodioPlugin.toStatus(e, repository));
 		}
-		return createTaskDataFromTicket(client, repository, item.getApplication().getId(), item, monitor);
 	}
-	
-	public TaskData createTaskDataFromTicket(PodioClient client, TaskRepository repository, int appId, Item item,
-			IProgressMonitor monitor) throws CoreException {
+
+	public TaskData createTaskDataFromItem(final PodioClient client, final TaskRepository repository, final int appId, final Item item,
+			final IProgressMonitor monitor) throws CoreException {
 		TaskData taskData = new TaskData(getAttributeMapper(repository), PodioPlugin.CONNECTOR_KIND,
 				repository.getRepositoryUrl(), item.getId() + ""); //$NON-NLS-1$
 		try {
@@ -81,47 +87,61 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 			throw new CoreException(PodioPlugin.toStatus(e, repository));
 		}
 	}
-	
-	public static Set<TaskAttribute> updateTaskData(TaskRepository repository, TaskData data, PodioClient client, Item item) {
-		Set<TaskAttribute> changedAttributes = new HashSet<TaskAttribute>();
-		
-		setAttrValue(data, changedAttributes, PodioAttribute.CREATED_BY, item.getInitialRevision().getCreatedBy().getName());
-		setAttrValue(data, changedAttributes, PodioAttribute.CREATED_ON, item.getInitialRevision().getCreatedOn());
-		setAttrValue(data, changedAttributes, PodioAttribute.CHANGED_BY, item.getCurrentRevision().getCreatedBy().getName());
-		setAttrValue(data, changedAttributes, PodioAttribute.CHANGED_ON, item.getCurrentRevision().getCreatedOn());
-//		setAttrValue(data, changedAttributes, PodioAttribute.DESCRIPTION, item.getTitle());
-		setAttrValue(data, changedAttributes, PodioAttribute.SUMMARY, item.getTitle());
+
+	public static Set<TaskAttribute> updateTaskData(final TaskRepository repository, final TaskData data, final PodioClient client, final Item item) {
+		Set<TaskAttribute> changedAttrs = new HashSet<TaskAttribute>();
+
+		setAttrValue(data, changedAttrs, PodioAttribute.CREATED_BY, item.getInitialRevision().getCreatedBy().getName());
+		setAttrValue(data, changedAttrs, PodioAttribute.CREATED_ON, item.getInitialRevision().getCreatedOn());
+		setAttrValue(data, changedAttrs, PodioAttribute.CHANGED_BY, item.getCurrentRevision().getCreatedBy().getName());
+		setAttrValue(data, changedAttrs, PodioAttribute.CHANGED_ON, item.getCurrentRevision().getCreatedOn());
+		//		setAttrValue(data, changedAttributes, PodioAttribute.DESCRIPTION, item.getTitle());
+		setAttrValue(data, changedAttrs, PodioAttribute.TITLE, item.getTitle());
 		if (item.getUserRatings() != null && !item.getUserRatings().isEmpty()) {
-			setAttrValue(data, changedAttributes, PodioAttribute.RATING, item.getUserRatings().values().iterator().next().toString());
+			// TODO
+			setAttrValue(data, changedAttrs, PodioAttribute.RATING, item.getUserRatings().values().iterator().next().toString());
 		}
 
 		List<FieldValuesView> fields = item.getFields();
 		for (FieldValuesView field : fields) {
-			TaskAttribute taskAttribute = data.getRoot().getAttribute(field.getLabel());
+			TaskAttribute taskAttribute = data.getRoot().getAttribute(
+					ATTR_PREFIX + field.getLabel());
 			if (taskAttribute != null) {
 				List<Map<String, ?>> values = field.getValues();
-				System.out.println("Setting values for att: "+ field.getLabel());
+				System.out.println("Setting values for ATT: " + field.getLabel());
 				for (Map<String, ?> map : values) {
-					System.out.println("Keys: "+ map.keySet());
-					System.out.println("Vals: "+ map.values());
+					System.out.println("Keys: " + map.keySet() + " - Vals: " + map.values());
 					Object value = map.get("value");
-//					if (value instanceof String) {
-					System.out.println("Value is of type" + value.getClass());
-					taskAttribute.setValue(value.toString());
-//					} else {
-//					}
+					if (value instanceof String) {
+						taskAttribute.addValue(value.toString());
+					} else if (value instanceof Map<?, ?>) {
+						Map<?, ?> mapValue = (Map<?, ?>) value;
+						System.out.println("Value of type " + value.getClass() + ": Keys: "
+								+ mapValue.keySet() + " - Vals: " + mapValue.values());
+						if (field.getType() == ApplicationFieldType.APP) {
+							taskAttribute.addValue(mapValue.get("item_id").toString());
+						}
+						if (field.getType() == ApplicationFieldType.CATEGORY) {
+							taskAttribute.addValue(mapValue.get("text").toString());
+						}
+					} else {
+						throw new IllegalArgumentException("Unexpected value of type "
+								+ value.getClass() + " for attribute " + field.getLabel());
+					}
 				}
-				changedAttributes.add(taskAttribute);
+				changedAttrs.add(taskAttribute);
 			} else {
 				StatusHandler.log(new Status(IStatus.WARNING, PodioPlugin.PLUGIN_ID, "TaskAttibute not found with key '"+field.getLabel()+"'"));
 			}
-			
-//			taskAttribute = data.getRoot().getAttribute(PodioAttribute.DESCRIPTION.getPodioKey());
-//			if (!taskAttribute.hasValue() && !field.getValues().isEmpty()) {
-//				taskAttribute.setValue("DESCR: "+field.getValues().get(0).get("value").toString());
-//			}
+
+			//			taskAttribute = data.getRoot().getAttribute(PodioAttribute.DESCRIPTION.getPodioKey());
+			//			if (!taskAttribute.hasValue() && !field.getValues().isEmpty()) {
+			//				taskAttribute.setValue("DESCR: "+field.getValues().get(0).get("value").toString());
+			//			}
 		}
-		
+
+		List<File> files = new ArrayList<File>();
+
 		List<Comment> comments = item.getComments();
 		if (comments != null) {
 			int count = 1;
@@ -131,58 +151,68 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 				mapper.setCreationDate(comment.getCreatedOn().toDate());
 				mapper.setText(comment.getValue());
 				mapper.setCommentId(comment.getId()+"");
-//				mapper.setUrl(comment.get);
 				mapper.setNumber(count);
-				
+
+				files.addAll(comment.getFiles());
+
 				TaskAttribute attribute = data.getRoot().createAttribute(TaskAttribute.PREFIX_COMMENT + count);
 				mapper.applyTo(attribute);
 				count++;
 			}
 		}
-	
-		List<File> files = item.getFiles();
-		if (files != null) {
-			int count = 0;
-			for (File file : files) {
-				TaskAttachmentMapper mapper = new TaskAttachmentMapper();
-				mapper.setAuthor(repository.createPerson(file.getCreatedBy().getId()+""));
-				mapper.setDescription(file.getDescription());
-				mapper.setFileName(file.getName());
-				mapper.setAttachmentId(file.getId()+"");
-				mapper.setLength(file.getSize());
-				mapper.setReplaceExisting(file.getReplaces() != null && !file.getReplaces().isEmpty());
-				mapper.setContentType(file.getMimetype().getPrimaryType());
-				mapper.setCreationDate(file.getCreatedOn().toDate());
-				mapper.setUrl(file.getContext().toURLFragment());
-				mapper.setComment(file.getContext().getTitle());
 
-				TaskAttribute attribute = data.getRoot().createAttribute(TaskAttribute.PREFIX_ATTACHMENT + ++count);
-				mapper.applyTo(attribute);
+		files.addAll(item.getFiles());
+		int count = 0;
+		for (File file : files) {
+			TaskAttachmentMapper mapper = new TaskAttachmentMapper();
+			mapper.setAuthor(repository.createPerson(file.getCreatedBy().getId() + ""));
+			mapper.setDescription(file.getDescription());
+			mapper.setFileName(file.getName());
+			mapper.setAttachmentId(file.getId() + "");
+			mapper.setLength(file.getSize());
+			mapper.setReplaceExisting(file.getReplaces() != null && !file.getReplaces().isEmpty());
+			mapper.setContentType(file.getMimetype().getPrimaryType());
+			mapper.setCreationDate(file.getCreatedOn().toDate());
+			if (file.getContext() != null) {
+				mapper.setUrl(file.getContext().toURLFragment());
+				mapper.setComment(file.getContext().getTitle() + " " + file.getContext().toString());
 			}
+
+			TaskAttribute attribute = data.getRoot().createAttribute(
+					TaskAttribute.PREFIX_ATTACHMENT + ++count);
+			mapper.applyTo(attribute);
 		}
-		
-//		TracAction[] actions = item.getActions();
-//		if (actions != null) {
-//			 add actions and set first as default
-//			for (TracAction action : actions) {
-//				addOperation(repository, data, item, action, action == actions[0]);
-//			}
-//		}
-		return changedAttributes;
+
+		//		TracAction[] actions = item.getActions();
+		//		if (actions != null) {
+		//			 add actions and set first as default
+		//			for (TracAction action : actions) {
+		//				addOperation(repository, data, item, action, action == actions[0]);
+		//			}
+		//		}
+		return changedAttrs;
 	}
 
 	/**
 	 * @param data
 	 * @param item
 	 * @param changedAttributes
-	 * @param podioAttr 
-	 * @param attrValue 
+	 * @param podioAttr
+	 * @param attrValue
 	 */
-	public static void setAttrValue(TaskData data, Set<TaskAttribute> changedAttributes, 
-			PodioAttribute podioAttr, Object attrValue) {
+	public static void setAttrValue(final TaskData data, final Set<TaskAttribute> changedAttributes,
+			final PodioAttribute podioAttr, final Object attrValue) {
 		TaskAttribute taskAttribute = data.getRoot().getAttribute(podioAttr.getPodioKey());
 		if (taskAttribute != null) {
-			taskAttribute.setValue(attrValue != null ? attrValue.toString() : "");
+			if (attrValue instanceof Date) {
+				taskAttribute.setValue(attrValue != null ? PodioAttributeMapper
+						.getStringFromDate((Date) attrValue) : "");
+			} else if (attrValue instanceof DateTime) {
+				taskAttribute.setValue(attrValue != null ? PodioAttributeMapper
+						.getStringFromDate(((DateTime) attrValue).toDate()) : "");
+			} else {
+				taskAttribute.setValue(attrValue != null ? attrValue.toString() : "");
+			}
 			if (changedAttributes != null) {
 				changedAttributes.add(taskAttribute);
 			}
@@ -191,28 +221,30 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 		}
 	}
 
-	public static void createDefaultAttributes(TaskData data, PodioClient client, int appId, boolean existingTask) {
-		createAttribute(data, client, PodioAttribute.SUMMARY);
-		createAttribute(data, client, PodioAttribute.DESCRIPTION);
+	public static void createDefaultAttributes(final TaskData data, final PodioClient client, final int appId, final boolean existingTask) {
+		createDefaultAttribute(data, client, PodioAttribute.TITLE);
+		createDefaultAttribute(data, client, PodioAttribute.DESCRIPTION);
 		if (existingTask) {
-			createAttribute(data, client, PodioAttribute.CREATED_BY);
-			createAttribute(data, client, PodioAttribute.CREATED_ON);
-			createAttribute(data, client, PodioAttribute.CHANGED_BY);
-			createAttribute(data, client, PodioAttribute.CHANGED_ON);
+			createDefaultAttribute(data, client, PodioAttribute.CREATED_BY);
+			createDefaultAttribute(data, client, PodioAttribute.CREATED_ON);
+			createDefaultAttribute(data, client, PodioAttribute.CHANGED_BY);
+			createDefaultAttribute(data, client, PodioAttribute.CHANGED_ON);
 		}
-		createAttribute(data, client, PodioAttribute.RATING);
-		createAttribute(data, client, PodioAttribute.TAGS);
-		createAttribute(data, client, PodioAttribute.TYPE);
-		// custom fields
+		createDefaultAttribute(data, client, PodioAttribute.RATING);
+		createDefaultAttribute(data, client, PodioAttribute.TAGS);
+		createDefaultAttribute(data, client, PodioAttribute.TYPE);
+		createDefaultAttribute(data, client, PodioAttribute.LINK);
+		// custom fields for app
 		List<ApplicationField> fields = client.getFields(appId);
 		for (ApplicationField field : fields) {
-			createAttribute(data, field);
+			createAppAttribute(data, field);
 		}
 		// operations
 		data.getRoot().createAttribute(TaskAttribute.OPERATION).getMetaData().setType(TaskAttribute.TYPE_OPERATION);
 	}
-	
-	public static TaskAttribute createAttribute(TaskData data, PodioClient client, PodioAttribute podioAttribute) {
+
+	public static TaskAttribute createDefaultAttribute(final TaskData data,
+			final PodioClient client, final PodioAttribute podioAttribute) {
 		TaskAttribute attr = data.getRoot().createAttribute(podioAttribute.getPodioKey());
 		TaskAttributeMetaData metaData = attr.getMetaData();
 		metaData.setType(podioAttribute.getType());
@@ -221,44 +253,49 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 		metaData.setReadOnly(podioAttribute.isReadOnly());
 		metaData.putValue(PODIO_KEY, podioAttribute.getPodioKey());
 		if (client != null) {
-//			TracTicketField field = client.getTicketFieldByName(podioAttribute.getTracKey());
-//			Map<String, String> values = PodioAttributeMapper.getRepositoryOptions(client, attr.getId());
-//			if (values != null && values.size() > 0) {
-//				boolean setDefault = field == null || !field.isOptional();
-//				for (Entry<String, String> value : values.entrySet()) {
-//					attr.putOption(value.getKey(), value.getValue());
-					// set first value as default, may get overwritten below
-//					if (setDefault) {
-//						attr.setValue(value.getKey());
-//					}
-//					setDefault = false;
-//				}
+			//			TracTicketField field = client.getTicketFieldByName(podioAttribute.getTracKey());
+			//			Map<String, String> values = PodioAttributeMapper.getRepositoryOptions(client, attr.getId());
+			//			if (values != null && values.size() > 0) {
+			//				boolean setDefault = field == null || !field.isOptional();
+			//				for (Entry<String, String> value : values.entrySet()) {
+			//					attr.putOption(value.getKey(), value.getValue());
+			// set first value as default, may get overwritten below
+			//					if (setDefault) {
+			//						attr.setValue(value.getKey());
+			//					}
+			//					setDefault = false;
+			//				}
 			if (TaskAttribute.TYPE_SINGLE_SELECT.equals(podioAttribute.getType())) {
 				attr.getMetaData().setReadOnly(true);
 			}
 		}
 		return attr;
 	}
-	
-	private static TaskAttribute createAttribute(TaskData data, ApplicationField field) {
-		TaskAttribute attr = data.getRoot().createAttribute(field.getConfiguration().getLabel());
+
+	private static TaskAttribute createAppAttribute(final TaskData data,
+			final ApplicationField field) {
+		TaskAttribute attr = data.getRoot().createAttribute(
+				ATTR_PREFIX + field.getConfiguration().getLabel());
 		TaskAttributeMetaData metaData = attr.getMetaData();
 		metaData.defaults();
 		metaData.setLabel(field.getConfiguration().getLabel() + ":"); //$NON-NLS-1$
 		metaData.setKind(TaskAttribute.KIND_DEFAULT);
 		metaData.setReadOnly(false);
 		metaData.putValue(PODIO_KEY, field.getId()+"");
+		metaData.putValue(PODIO_TYPE, field.getType().name());
 		if (field.getType() == ApplicationFieldType.CATEGORY || field.getType() == ApplicationFieldType.STATE) {
 			metaData.setType(TaskAttribute.TYPE_MULTI_SELECT);
 			List<String> allowValues = field.getConfiguration().getSettings().getAllowedValues();
-			for (String val : allowValues) {
-				attr.putOption(val, val);
+			if (allowValues != null) {
+				for (String val : allowValues) {
+					attr.putOption(val, val);
+				}
 			}
 		} else if (field.getType() == ApplicationFieldType.APP) {
 			metaData.setType(TaskAttribute.TYPE_TASK_DEPENDENCY);
 			List<Integer> allowValues = field.getConfiguration().getSettings().getReferenceableTypes();
 			for (Integer val : allowValues) {
-				attr.putOption(val.toString(), val.toString());
+				attr.putOption("APP REF" + val.toString(), val.toString());
 			}
 		} else if (field.getType() == ApplicationFieldType.CALCULATION) {
 			metaData.setType(TaskAttribute.TYPE_DOUBLE);
@@ -275,7 +312,7 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 			metaData.setType(TaskAttribute.TYPE_DOUBLE);
 		} else if (field.getType() == ApplicationFieldType.PROGRESS) {
 			metaData.setType(TaskAttribute.TYPE_INTEGER);
-		} else if (field.getType() == ApplicationFieldType.TEXT 
+		} else if (field.getType() == ApplicationFieldType.TEXT
 				&& field.getConfiguration().getSettings().getSize() == TextFieldSize.LARGE) {
 			metaData.setType(TaskAttribute.TYPE_LONG_TEXT);
 		} else {
@@ -283,32 +320,32 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 		}
 		return attr;
 	}
-	
-	private void removeEmptySingleSelectAttributes(TaskData taskData) {
+
+	private void removeEmptySingleSelectAttributes(final TaskData taskData) {
 		List<TaskAttribute> attributes = new ArrayList<TaskAttribute>(taskData.getRoot().getAttributes().values());
 		for (TaskAttribute attribute : attributes) {
 			if (TaskAttribute.TYPE_SINGLE_SELECT.equals(attribute.getMetaData().getType())
 					&& attribute.getValue().length() == 0 && attribute.getOptions().isEmpty()) {
-				taskData.getRoot().removeAttribute(attribute.getId());
+				// taskData.getRoot().removeAttribute(attribute.getId());
 			}
 		}
 	}
-	
+
 	@Override
-	public RepositoryResponse postTaskData(TaskRepository repository, TaskData taskData,
-			Set<TaskAttribute> oldAttributes, IProgressMonitor monitor) throws CoreException {
+	public RepositoryResponse postTaskData(final TaskRepository repository, final TaskData taskData,
+			final Set<TaskAttribute> oldAttributes, final IProgressMonitor monitor) throws CoreException {
 		try {
 			Item item = PodioTaskDataHandler.getPodioItem(repository, taskData);
-			PodioClient server = PodioClient.getClient(repository);
+			PodioClient server = connector.getClientManager().getClient(repository);
 			if (taskData.isNew()) {
 				int id = server.createItem(item);
 				return new RepositoryResponse(ResponseKind.TASK_CREATED, id + ""); //$NON-NLS-1$
 			} else {
-//				String newComment = ""; //$NON-NLS-1$
-//				TaskAttribute newCommentAttribute = taskData.getRoot().getMappedAttribute(TaskAttribute.COMMENT_NEW);
-//				if (newCommentAttribute != null) {
-//					newComment = newCommentAttribute.getValue();
-//				}
+				//				String newComment = ""; //$NON-NLS-1$
+				//				TaskAttribute newCommentAttribute = taskData.getRoot().getMappedAttribute(TaskAttribute.COMMENT_NEW);
+				//				if (newCommentAttribute != null) {
+				//					newComment = newCommentAttribute.getValue();
+				//				}
 				server.updateItem(item);
 				return new RepositoryResponse(ResponseKind.TASK_UPDATED, item.getId() + ""); //$NON-NLS-1$
 			}
@@ -316,38 +353,45 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 			throw e;
 		} catch (Exception e) {
 			// TODO catch TracException
+			e.printStackTrace();
 			throw new CoreException(PodioPlugin.toStatus(e, repository));
 		}
 	}
 
-	public static Item  getPodioItem(TaskRepository repository, TaskData data) throws CoreException {
+	public static Item getPodioItem(final TaskRepository repository, final TaskData data)
+			throws CoreException {
 		Item ticket = new Item();
 		if (!data.isNew()) {
 			ticket.setId(PodioRepositoryConnector.getPodioId(data.getTaskId()));
 		}
-		
+
 		Collection<TaskAttribute> attributes = data.getRoot().getAttributes().values();
 		for (TaskAttribute attribute : attributes) {
-//			if (TracAttributeMapper.isInternalAttribute(attribute)
-//					|| TracAttribute.RESOLUTION.getTracKey().equals(attribute.getId())) {
-				// ignore internal attributes, resolution is set through operations
-			/*} else */if (!attribute.getMetaData().isReadOnly() /*|| Key.TOKEN.getKey().equals(attribute.getId())*/) {
-//				ticket.putValue(attribute.getId(), attribute.getValue());
+			//			if (TracAttributeMapper.isInternalAttribute(attribute)
+			//					|| TracAttribute.RESOLUTION.getTracKey().equals(attribute.getId())) {
+			// ignore internal attributes, resolution is set through operations
+			/* } else */
+			if (!attribute.getMetaData().isReadOnly() /*
+			 * ||
+			 * Key.TOKEN.getKey().equals
+			 * (attribute.getId())
+			 */) {
+				//				ticket.putValue(attribute.getId(), attribute.getValue());
 			}
 		}
-		
-//		ticket.setLastChanged(lastChanged);
-		
+
+		//		ticket.setLastChanged(lastChanged);
+
 		return ticket;
 	}
 
 	@Override
-	public boolean initializeTaskData(TaskRepository repository, TaskData data,
-			ITaskMapping initializationData, IProgressMonitor monitor)
-			throws CoreException {
+	public boolean initializeTaskData(final TaskRepository repository, final TaskData data,
+			final ITaskMapping initializationData, IProgressMonitor monitor)
+					throws CoreException {
 		monitor = Policy.monitorFor(monitor);
 		try {
-			PodioClient client = PodioClient.getClient(repository);			
+			PodioClient client = connector.getClientManager().getClient(repository);
 			createDefaultAttributes(data, client, 0, false);
 			removeEmptySingleSelectAttributes(data);
 			return true;
@@ -360,8 +404,15 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 	}
 
 	@Override
-	public TaskAttributeMapper getAttributeMapper(TaskRepository repository) {
-		PodioClient client = PodioClient.getClient(repository);
+	public boolean initializeSubTaskData(final TaskRepository repository, final TaskData taskData,
+			final TaskData parentTaskData, final IProgressMonitor monitor) throws CoreException {
+		// TODO Auto-generated method stub
+		return super.initializeSubTaskData(repository, taskData, parentTaskData, monitor);
+	}
+
+	@Override
+	public TaskAttributeMapper getAttributeMapper(final TaskRepository repository) {
+		PodioClient client = connector.getClientManager().getClient(repository);
 		return new PodioAttributeMapper(repository, client);
 	}
 

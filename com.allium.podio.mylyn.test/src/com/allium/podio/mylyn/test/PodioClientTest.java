@@ -1,10 +1,15 @@
 package com.allium.podio.mylyn.test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalToIgnoringWhiteSpace;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.util.List;
 
+import org.eclipse.mylyn.commons.net.WebLocation;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,19 +26,22 @@ public class PodioClientTest {
 
 	@Before
 	public void setupClient() {
-		client = PodioClient.getClient("guillez@gmail.com", "Guille!563");
+		// client = PodioClient.getClient("guillez@gmail.com", "Guille!563");
+		// AbstractWebLocation location = new
+		// TaskRepositoryLocation(taskRepository);
+		client = new PodioClient(new WebLocation("podio.com", "guillez@gmail.com", "Guille!563"));
 	}
-	
+
 	@Test
 	public void testSpaces() {
 		List<OrganizationWithSpaces> orgs = client.getOrgs();
-		
+
 		assertThat(orgs, notNullValue());
 		assertThat(orgs, not(empty()));
 		assertThat(orgs.get(0).getId(), not(0));
 		assertThat(orgs.get(0).getName(), notNullValue());
 		assertThat(orgs.get(0).getName(), not(equalToIgnoringWhiteSpace("")));
-		
+
 		List<SpaceMini> spaces = orgs.get(0).getSpaces();
 		assertThat(spaces, notNullValue());
 		assertThat(spaces, not(empty()));
@@ -41,7 +49,7 @@ public class PodioClientTest {
 		assertThat(spaces.get(0).getName(), notNullValue());
 		assertThat(spaces.get(0).getName(), not(equalToIgnoringWhiteSpace("")));
 	}
-	
+
 	@Test
 	public void testApps() {
 		int spaceId = client.getOrgs().get(0).getSpaces().get(0).getId();
@@ -53,13 +61,13 @@ public class PodioClientTest {
 		assertThat(apps.get(0).getConfiguration(), notNullValue());
 		assertThat(apps.get(0).getConfiguration().getName(), not(equalToIgnoringWhiteSpace("")));
 	}
-	
+
 	@Test
 	public void testFields() {
 		int appId = getAnAppId();
-		
+
 		List<ApplicationField> fields = client.getFields(appId);
-		
+
 		assertThat(fields, notNullValue());
 		assertThat(fields, not(empty()));
 		assertThat(fields.get(0).getId(), not(0));
@@ -67,25 +75,25 @@ public class PodioClientTest {
 		assertThat(fields.get(0).getConfiguration().getSettings(), notNullValue());
 	}
 
-	
+
 	@Test
 	public void testQueryItems() {
 		int appId = getAnAppId();
-		
+
 		List<ItemBadge> items = client.queryItems(appId);
 		assertThat(items, notNullValue());
 		assertThat(items.size(), not(0));
 	}
-	
+
 	@Test
 	public void testItem() {
 		int appId = getAnAppId();
-		
+
 		List<ItemBadge> items = client.queryItems(appId);
 		ItemBadge itemMini = items.get(0);
-		
-		Item item = client.getItem(itemMini.getId());
-		
+
+		Item item = client.getItem(itemMini.getId(), false);
+
 		assertThat(item, notNullValue());
 		assertThat(item.getId(), not(nullValue()));
 	}

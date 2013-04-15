@@ -12,3 +12,4 @@ Require-Bundle: com.allium.podio.mylyn.core;bundle-version="0.0.1",
 Bundle-ClassPath: lib/hamcrest-all.jar,
  lib/mockito-all.jar,
  .
+Import-Package: org.eclipse.mylyn.commons.net

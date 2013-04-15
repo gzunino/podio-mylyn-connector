@@ -32,14 +32,14 @@ import org.eclipse.mylyn.tasks.core.data.UnsubmittedTaskAttachment;
  */
 public class PodioAttachmentHandler extends AbstractTaskAttachmentHandler {
 
-//	private final PodioRepositoryConnector connector;
+	private final PodioRepositoryConnector connector;
 
-	public PodioAttachmentHandler(PodioRepositoryConnector connector) {
-//		this.connector = connector;
+	public PodioAttachmentHandler(final PodioRepositoryConnector connector) {
+		this.connector = connector;
 	}
 
 	@Override
-	public InputStream getContent(TaskRepository repository, ITask task, TaskAttribute attachmentAttribute,
+	public InputStream getContent(final TaskRepository repository, final ITask task, final TaskAttribute attachmentAttribute,
 			IProgressMonitor monitor) throws CoreException {
 		TaskAttachmentMapper mapper = TaskAttachmentMapper.createFrom(attachmentAttribute);
 		String filename = mapper.getFileName();
@@ -52,9 +52,9 @@ public class PodioAttachmentHandler extends AbstractTaskAttachmentHandler {
 		monitor = Policy.monitorFor(monitor);
 		try {
 			monitor.beginTask("Downloading attachment", IProgressMonitor.UNKNOWN);
-			PodioClient client = PodioClient.getClient(repository);
-			int id = Integer.parseInt(task.getTaskId());
-			return client.getFile(id, filename);
+			PodioClient client = connector.getClientManager().getClient(repository);
+			int fileId = Integer.parseInt(mapper.getAttachmentId());
+			return client.getFile(fileId, filename);
 		} catch (OperationCanceledException e) {
 			throw e;
 		} catch (Exception e) {
@@ -65,32 +65,33 @@ public class PodioAttachmentHandler extends AbstractTaskAttachmentHandler {
 	}
 
 	@Override
-	public void postContent(TaskRepository repository, ITask task, AbstractTaskAttachmentSource source, String comment,
-			TaskAttribute attachmentAttribute, IProgressMonitor monitor) throws CoreException {
-//		if (!TracRepositoryConnector.hasAttachmentSupport(repository, task)) {
-//			throw new CoreException(new RepositoryStatus(repository.getRepositoryUrl(), IStatus.INFO,
-//					TracCorePlugin.ID_PLUGIN, RepositoryStatus.ERROR_REPOSITORY,
-//					"Attachments are not supported by this repository access type")); //$NON-NLS-1$
-//		}
+	public void postContent(final TaskRepository repository, final ITask task, final AbstractTaskAttachmentSource source, final String comment,
+			final TaskAttribute attachmentAttribute, IProgressMonitor monitor) throws CoreException {
+		//		if (!TracRepositoryConnector.hasAttachmentSupport(repository, task)) {
+		//			throw new CoreException(new RepositoryStatus(repository.getRepositoryUrl(), IStatus.INFO,
+		//					TracCorePlugin.ID_PLUGIN, RepositoryStatus.ERROR_REPOSITORY,
+		//					"Attachments are not supported by this repository access type")); //$NON-NLS-1$
+		//		}
 
 		UnsubmittedTaskAttachment attachment = new UnsubmittedTaskAttachment(source, attachmentAttribute);
 		monitor = Policy.monitorFor(monitor);
 		try {
 			monitor.beginTask("Uploading attachment", IProgressMonitor.UNKNOWN);
 			try {
-				PodioClient client = PodioClient.getClient(repository);
+				PodioClient client = connector.getClientManager().getClient(repository);
 				int itemId = Integer.parseInt(task.getTaskId());
-				
-				int fileId = client.uploadFile(attachment.getFileName(), attachment.createInputStream(monitor));
-				
+
+				int fileId = client.uploadFile(attachment.getFileName(),
+						attachment.getDescription(), attachment.createInputStream(monitor));
+
 				client.attachFile(itemId, fileId);
-				
-//				client.putAttachmentData(itemId, attachment.getFileName(), attachment.getDescription(),
-//						attachment.createInputStream(monitor), monitor, attachment.getReplaceExisting());
-//				if (comment != null && comment.length() > 0) {
-//					TracTicket ticket = new TracTicket(itemId);
-//					client.updateTicket(ticket, comment, monitor);
-//				}
+
+				//				client.putAttachmentData(itemId, attachment.getFileName(), attachment.getDescription(),
+				//						attachment.createInputStream(monitor), monitor, attachment.getReplaceExisting());
+				//				if (comment != null && comment.length() > 0) {
+				//					TracTicket ticket = new TracTicket(itemId);
+				//					client.updateTicket(ticket, comment, monitor);
+				//				}
 			} catch (OperationCanceledException e) {
 				throw e;
 			} catch (Exception e) {
@@ -100,15 +101,15 @@ public class PodioAttachmentHandler extends AbstractTaskAttachmentHandler {
 			monitor.done();
 		}
 	}
-	
+
 
 	@Override
-	public boolean canGetContent(TaskRepository repository, ITask task) {
+	public boolean canGetContent(final TaskRepository repository, final ITask task) {
 		return true;
 	}
 
 	@Override
-	public boolean canPostContent(TaskRepository repository, ITask task) {
+	public boolean canPostContent(final TaskRepository repository, final ITask task) {
 		return true;
 	}
 

@@ -12,8 +12,10 @@ Require-Bundle: org.eclipse.core.runtime,
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
 Export-Package: com.allium.podio.mylyn.core,
+ com.allium.podio.mylyn.core.podio.ex,
  com.podio,
  com.podio.app,
+ com.podio.contact,
  com.podio.filter,
  com.podio.item,
  com.podio.org,

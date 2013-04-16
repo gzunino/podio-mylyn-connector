@@ -13,11 +13,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.mylyn.commons.net.AbstractWebLocation;
 import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
 import org.eclipse.mylyn.commons.net.AuthenticationType;
+import org.eclipse.mylyn.commons.net.UnsupportedRequestException;
 import org.joda.time.DateTime;
 
+import com.allium.podio.mylyn.core.podio.ex.SpaceAPIEx;
 import com.podio.APIFactory;
 import com.podio.ResourceFactory;
 import com.podio.app.AppAPI;
@@ -40,6 +43,7 @@ import com.podio.oauth.OAuthClientCredentials;
 import com.podio.oauth.OAuthUsernameCredentials;
 import com.podio.org.OrgAPI;
 import com.podio.org.OrganizationWithSpaces;
+import com.podio.space.SpaceMember;
 import com.podio.stream.StreamAPI;
 import com.podio.stream.StreamObjectV2;
 import com.podio.user.UserAPI;
@@ -52,7 +56,7 @@ public class PodioClient {
 
 	private APIFactory apiFactory;
 
-	private final AbstractWebLocation location;
+//	private final AbstractWebLocation location;
 	// private final String repositoryUrl;
 	private final PodioClientData data;
 
@@ -60,18 +64,26 @@ public class PodioClient {
 	// ResourceFactory resourceFactory = new ResourceFactory(
 	// new OAuthClientCredentials(PODIO_CLIENTID, PODIO_KEY),
 	// new OAuthUsernameCredentials(username, password));
-	// apiFactory = new APIFactory(resourceFactory);
+	// apiFactory = new APIFactory(resourceFactory);client
 	// }
 
-	public PodioClient(final AbstractWebLocation location) {
-		this.location = location;
+	public PodioClient(final AbstractWebLocation location, PodioClientData data) {
+//		this.location = location;
 		// this.repositoryUrl = location.getUrl();
 
-		this.data = new PodioClientData();
+		if (data == null) {
+			data = new PodioClientData();
+		}
+		this.data = data;
 
-		AuthenticationCredentials cred = this.location
-				.getCredentials(AuthenticationType.REPOSITORY);
-
+		AuthenticationCredentials cred = location.getCredentials(AuthenticationType.REPOSITORY);
+		if (cred.getUserName() == null || cred.getPassword() == null) {
+			try {
+				location.requestCredentials(AuthenticationType.REPOSITORY, null, new NullProgressMonitor());
+			} catch (UnsupportedRequestException e) {
+				PodioPlugin.toStatus(e, location.getUrl());
+			}
+		}
 		createAPIFactory(cred);
 	}
 
@@ -84,7 +96,7 @@ public class PodioClient {
 				new OAuthUsernameCredentials(cred.getUserName(), cred.getPassword()));
 		apiFactory = new APIFactory(resourceFactory);
 	}
-
+	
 	// public static PodioClient getClient(final String username, final String
 	// password) {
 	// if (instance == null) {
@@ -167,6 +179,16 @@ public class PodioClient {
 			data.cacheItems.put(id, item);
 		}
 		return item;
+	}
+
+	public <T extends SpaceMember> List<T> getMembers(final int spaceId) {
+		List<? extends SpaceMember> members = data.cacheMembers.get(spaceId);
+		if (members == null) {
+			SpaceAPIEx api = apiFactory.getAPI(SpaceAPIEx.class);
+			members = api.getMembers(spaceId);
+			data.cacheMembers.put(spaceId, members);
+		}
+		return (List<T>) members;
 	}
 
 	public InputStream getFile(final int fileId, final String filename) throws IOException {

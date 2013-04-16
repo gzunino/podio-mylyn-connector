@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry exported="true" kind="lib" path="lib/com.podio.api_0.7.4.jar" sourcepath="/local/api-0.7.4-sources.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/com.podio.api_0.7.4.jar" sourcepath="/local/api-0.7.4-src.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/com.sun.jersey.contribs.jersey-multipart_1.8.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/com.sun.jersey.jersey-client_1.8.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/com.sun.jersey.jersey-core_1.8.0.jar"/>

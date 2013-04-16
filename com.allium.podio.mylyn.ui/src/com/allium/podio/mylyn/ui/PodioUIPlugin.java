@@ -1,7 +1,12 @@
 package com.allium.podio.mylyn.ui;
 
+import org.eclipse.mylyn.tasks.ui.TaskRepositoryLocationUiFactory;
+import org.eclipse.mylyn.tasks.ui.TasksUi;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
+
+import com.allium.podio.mylyn.core.PodioPlugin;
+import com.allium.podio.mylyn.core.PodioRepositoryConnector;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -27,6 +32,12 @@ public class PodioUIPlugin extends AbstractUIPlugin {
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
+		
+		PodioRepositoryConnector connector = (PodioRepositoryConnector) TasksUi.getRepositoryManager()
+				.getRepositoryConnector(PodioPlugin.CONNECTOR_KIND);
+		
+		connector.setTaskRepositoryLocationFactory(new TaskRepositoryLocationUiFactory());
+		TasksUi.getRepositoryManager().addListener(connector.getClientManager());
 	}
 
 	/*

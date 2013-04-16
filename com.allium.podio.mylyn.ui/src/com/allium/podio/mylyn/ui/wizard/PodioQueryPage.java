@@ -35,10 +35,12 @@ import com.podio.app.ApplicationField;
 import com.podio.app.ApplicationFieldType;
 import com.podio.app.ApplicationMini;
 import com.podio.filter.AppFieldFilterBy;
+import com.podio.filter.MemberFieldFilterBy;
 import com.podio.filter.StateFieldFilterBy;
 import com.podio.item.ItemBadge;
 import com.podio.org.OrganizationMini;
 import com.podio.org.OrganizationWithSpaces;
+import com.podio.space.SpaceMember;
 import com.podio.space.SpaceMini;
 
 public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
@@ -73,10 +75,24 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 
 	public static abstract class FieldEditor {
 
-		private ApplicationField appField;
 		protected PodioClient client;
+		protected Composite parent;
+		protected ApplicationField appField;
+		protected OrganizationWithSpaces org;
+		protected SpaceMini space;
+		protected ApplicationMini app;
 
-		public abstract Control createEditor(Composite parent, ApplicationField applicationField, PodioClient client);
+		public final Control createEditor(Composite parent, OrganizationWithSpaces org, SpaceMini space, ApplicationMini app, ApplicationField appField, PodioClient client) {
+			this.parent = parent;
+			this.org = org;
+			this.space = space;
+			this.app = app;
+			this.appField = appField;
+			this.client = client;
+			return this.createEditor(parent);
+		}
+
+		protected abstract Control createEditor(Composite parent);
 
 		public String getFieldId() {
 			assert appField != null;
@@ -90,10 +106,7 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 		protected org.eclipse.swt.widgets.List list;
 
 		@Override
-		public Control createEditor(final Composite parent, final ApplicationField applicationField, final PodioClient client) {
-			super.appField = applicationField;
-			super.client = client;
-
+		public Control createEditor(final Composite parent) {
 			final Composite group = new Composite(parent, SWT.NONE);
 			GridDataFactory.fillDefaults().grab(false, true).align(SWT.FILL, SWT.FILL).applyTo(group);
 			GridLayout layout = new GridLayout();
@@ -103,20 +116,19 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 			group.setLayout(layout);
 
 			Label label = new Label(group, SWT.LEFT);
-			label.setText(applicationField.getConfiguration().getLabel());
+			label.setText(appField.getConfiguration().getLabel());
 
-			list = new org.eclipse.swt.widgets.List(group, SWT.MULTI | SWT.V_SCROLL | SWT.BORDER);
-			GridData gd = new GridData(SWT.FILL, SWT.FILL, false, true);
+			list = new org.eclipse.swt.widgets.List(group, SWT.MULTI | SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER);
+			GridData gd = new GridData(SWT.BEGINNING, SWT.FILL, false, true);
 			//			gd.heightHint = height;
 			list.setLayoutData(gd);
 
-			setInput(list, applicationField);
+			setInput(list);
 
 			return list;
 		}
 
-		protected abstract void setInput(org.eclipse.swt.widgets.List list,
-				ApplicationField applicationField);
+		protected abstract void setInput(org.eclipse.swt.widgets.List list);
 	}
 
 	public static class FieldStateEditor extends ListFieldEditor {
@@ -130,9 +142,8 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 		}
 
 		@Override
-		protected void setInput(final org.eclipse.swt.widgets.List list,
-				final ApplicationField applicationField) {
-			list.setItems(applicationField.getConfiguration().getSettings().getAllowedValues().toArray(new String[0]));
+		protected void setInput(final org.eclipse.swt.widgets.List list) {
+			list.setItems(appField.getConfiguration().getSettings().getAllowedValues().toArray(new String[0]));
 		}
 	}
 
@@ -154,14 +165,39 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 		}
 
 		@Override
-		protected void setInput(final org.eclipse.swt.widgets.List list,
-				final ApplicationField applicationField) {
-			List<Integer> refApps = applicationField.getConfiguration().getSettings().getReferenceableTypes();
+		protected void setInput(final org.eclipse.swt.widgets.List list) {
+			List<Integer> refApps = appField.getConfiguration().getSettings().getReferenceableTypes();
 			for (Integer refApp : refApps) {
 				refItems.addAll(super.client.queryItems(refApp));
 			}
 			for (ItemBadge itemBadge : refItems) {
 				list.add(itemBadge.getTitle());
+			}
+		}
+	}
+	
+	public static class FieldMemberEditor extends ListFieldEditor {
+		private List<SpaceMember> members;
+
+		@Override
+		public String getValue() {
+			if (list.getSelectionCount() == 0) {
+				return null;
+			}
+			int[] selected = list.getSelectionIndices();
+			List<Integer> selectedIds = new ArrayList<Integer>();
+			for (int index : selected) {
+				selectedIds.add(members.get(index).getUser().getProfileId());
+			}
+			return new MemberFieldFilterBy(0).format(selectedIds).replaceAll("; ", ";");
+		}
+
+		@Override
+		protected void setInput(final org.eclipse.swt.widgets.List list) {
+			members = client.getMembers(space.getId());
+			
+			for (SpaceMember member : members) {
+				list.add(member.getUser().getName());
 			}
 		}
 	}
@@ -171,6 +207,8 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 	static {
 		fieldEditorMap.put(ApplicationFieldType.STATE, FieldStateEditor.class);
 		fieldEditorMap.put(ApplicationFieldType.APP, FieldAppEditor.class);
+		fieldEditorMap.put(ApplicationFieldType.MEMBER, FieldMemberEditor.class);
+		fieldEditorMap.put(ApplicationFieldType.CONTACT, FieldMemberEditor.class);
 	}
 
 	private ComboField<OrganizationWithSpaces> orgField;
@@ -303,8 +341,10 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 			public void selectionChanged(final SelectionChangedEvent event) {
 				clearFields();
 				if (!event.getSelection().isEmpty()) {
+					OrganizationWithSpaces org = orgField.getSelection();
+					SpaceMini space = spaceField.getSelection();
 					ApplicationMini app = appField.getSelection();
-					createFields(group, app);
+					createFields(group, org, space, app);
 				}
 			}
 		});
@@ -322,9 +362,9 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 		}
 	}
 
-	protected void createFields(final Composite parent, final ApplicationMini app) {
+	protected void createFields(final Composite parent, final OrganizationWithSpaces org, final SpaceMini space, final ApplicationMini app) {
 		fieldsComposite = new Composite(parent, SWT.NONE);
-		GridDataFactory.fillDefaults().grab(true, true).align(SWT.FILL, SWT.FILL).span(3, 1).applyTo(fieldsComposite);
+		GridDataFactory.fillDefaults().grab(false, true).align(SWT.FILL, SWT.FILL).span(3, 1).applyTo(fieldsComposite);
 		GridLayout layout = new GridLayout();
 		layout.marginHeight = 0;
 		layout.marginWidth = 0;
@@ -341,7 +381,7 @@ public class PodioQueryPage extends AbstractRepositoryQueryPage2 {
 			if (editorFactory != null) {
 				try {
 					FieldEditor editor = (FieldEditor) editorFactory.newInstance();
-					editor.createEditor(fieldsComposite, applicationField, client);
+					editor.createEditor(fieldsComposite, org, space, app, applicationField, client);
 					filters.add(editor);
 				} catch (InstantiationException | IllegalAccessException e) {
 					e.printStackTrace();

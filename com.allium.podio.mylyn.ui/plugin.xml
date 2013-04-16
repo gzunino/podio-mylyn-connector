@@ -4,7 +4,7 @@
    <extension
          point="org.eclipse.mylyn.tasks.ui.repositories">
       <connectorCore
-            class="com.allium.podio.mylyn.ui.PodioRepositoryConnector"
+            class="com.allium.podio.mylyn.core.PodioRepositoryConnector"
             name="Podio Connector Core">
       </connectorCore>
       <connectorUi

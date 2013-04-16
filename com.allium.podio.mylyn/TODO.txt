@@ -9,7 +9,7 @@
 
 -- Features
 - UI configPage to map status and status values to custom field
-- map to mylyn description, status, estimate, active...
+- map to mylyn Priority, Status, Due, Estimated Hours, Active, Description ...
 - Syncronization
 - Post
 - Editor

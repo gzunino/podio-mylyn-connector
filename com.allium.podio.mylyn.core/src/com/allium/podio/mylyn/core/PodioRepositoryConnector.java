@@ -32,6 +32,7 @@ import com.podio.app.ApplicationFieldType;
 import com.podio.filter.AppFieldFilterBy;
 import com.podio.filter.FieldFilterBy;
 import com.podio.filter.FilterByValue;
+import com.podio.filter.MemberFieldFilterBy;
 import com.podio.filter.StateFieldFilterBy;
 import com.podio.item.Item;
 import com.podio.item.ItemBadge;
@@ -47,6 +48,8 @@ public class PodioRepositoryConnector extends AbstractRepositoryConnector {
 	static {
 		fieldTypeMap.put(ApplicationFieldType.STATE, StateFieldFilterBy.class);
 		fieldTypeMap.put(ApplicationFieldType.APP, AppFieldFilterBy.class);
+		fieldTypeMap.put(ApplicationFieldType.MEMBER, MemberFieldFilterBy.class);
+		fieldTypeMap.put(ApplicationFieldType.CONTACT, MemberFieldFilterBy.class);
 	}
 
 	public static final String TASK_KEY_UPDATE_DATE = "UpdateDate"; //$NON-NLS-1$
@@ -62,7 +65,8 @@ public class PodioRepositoryConnector extends AbstractRepositoryConnector {
 	 * 
 	 */
 	public PodioRepositoryConnector() {
-		setTaskRepositoryLocationFactory(new TaskRepositoryLocationFactory());
+		PodioPlugin.getDefault().setConnector(this);
+//		setTaskRepositoryLocationFactory(new TaskRepositoryLocationFactory());
 	}
 
 	public synchronized PodioClientManager getClientManager() {
@@ -389,5 +393,11 @@ public class PodioRepositoryConnector extends AbstractRepositoryConnector {
 			}
 		}
 		return mostRecentTimeStamp;
+	}
+
+	public void stop() {
+		if (clientManager != null) {
+			clientManager.writeCache();
+		}
 	}
 }

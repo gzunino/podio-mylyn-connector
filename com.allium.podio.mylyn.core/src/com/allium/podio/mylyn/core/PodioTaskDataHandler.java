@@ -112,7 +112,12 @@ public class PodioTaskDataHandler extends AbstractTaskDataHandler {
 				for (Map<String, ?> map : values) {
 					System.out.println("Keys: " + map.keySet() + " - Vals: " + map.values());
 					Object value = map.get("value");
+					if (value == null) {
+						throw new IllegalArgumentException("null value for attribute " + field.getLabel());
+					}
 					if (value instanceof String) {
+						taskAttribute.addValue(value.toString());
+					} else if (value instanceof Number) {
 						taskAttribute.addValue(value.toString());
 					} else if (value instanceof Map<?, ?>) {
 						Map<?, ?> mapValue = (Map<?, ?>) value;

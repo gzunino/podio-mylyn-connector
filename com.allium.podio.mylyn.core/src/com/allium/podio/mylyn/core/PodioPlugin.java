@@ -19,9 +19,23 @@ public class PodioPlugin implements BundleActivator {
 
 	
 	private static BundleContext context;
+	private static PodioPlugin plugin;
+	private PodioRepositoryConnector connector;
+
+	public PodioRepositoryConnector getConnector() {
+		return connector;
+	}
+
+	public void setConnector(PodioRepositoryConnector connector) {
+		this.connector = connector;
+	}
 
 	static BundleContext getContext() {
 		return context;
+	}
+	
+	public static PodioPlugin getDefault() {
+		return plugin;
 	}
 
 	/*
@@ -30,6 +44,7 @@ public class PodioPlugin implements BundleActivator {
 	 */
 	public void start(BundleContext bundleContext) throws Exception {
 		PodioPlugin.context = bundleContext;
+		plugin = this;
 	}
 
 	/*
@@ -37,10 +52,18 @@ public class PodioPlugin implements BundleActivator {
 	 * @see org.osgi.framework.BundleActivator#stop(org.osgi.framework.BundleContext)
 	 */
 	public void stop(BundleContext bundleContext) throws Exception {
+		if (connector != null) {
+			connector.stop();
+			connector = null;
+		}
 		PodioPlugin.context = null;
 	}
 
 	public static IStatus toStatus(Throwable e, TaskRepository repository) {
+		return toStatus(e, repository.getRepositoryUrl());
+	}
+	
+	public static IStatus toStatus(Throwable e, String url) {
 //		if (e instanceof TracLoginException) {
 //			return RepositoryStatus.createLoginError(repository.getRepositoryUrl(), PLUGIN_ID);
 //		} else if (e instanceof TracPermissionDeniedException) {
@@ -51,14 +74,14 @@ public class PodioPlugin implements BundleActivator {
 //		} else if (e instanceof TracMidAirCollisionException) {
 //			return RepositoryStatus.createCollisionError(repository.getUrl(), TracCorePlugin.PLUGIN_ID);
 		if (e instanceof APITransportException) {
-			return new RepositoryStatus(repository.getRepositoryUrl(), IStatus.ERROR, PLUGIN_ID,
+			return new RepositoryStatus(url, IStatus.ERROR, PLUGIN_ID,
 					RepositoryStatus.ERROR_IO, "the server returned an unexpected response", e);
 		} else if (e instanceof APIApplicationException) {
 			String message = e.getMessage();
 			if (message == null) {
 				message = "I/O error has occured";
 			}
-			return new RepositoryStatus(repository.getRepositoryUrl(), IStatus.ERROR, PLUGIN_ID,
+			return new RepositoryStatus(url, IStatus.ERROR, PLUGIN_ID,
 					RepositoryStatus.ERROR_IO, message, e);
 		} else if (e instanceof ClassCastException) {
 			return new RepositoryStatus(IStatus.ERROR, PLUGIN_ID, RepositoryStatus.ERROR_IO,

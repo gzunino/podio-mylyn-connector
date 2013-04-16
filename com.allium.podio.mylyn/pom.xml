@@ -26,11 +26,11 @@
 			<layout>p2</layout>
 			<url>http://download.eclipse.org/releases/kepler</url>
 		</repository>
-		<repository>
-			<id>podio-dependencies</id>
-			<layout>p2</layout>
-			<url>http://localhost:8080/site/</url>
-		</repository>
+<!-- 		<repository> -->
+<!-- 			<id>podio-dependencies</id> -->
+<!-- 			<layout>p2</layout> -->
+<!-- 			<url>http://localhost:8080/site/</url> -->
+<!-- 		</repository> -->
 	</repositories>
 
 	<build>

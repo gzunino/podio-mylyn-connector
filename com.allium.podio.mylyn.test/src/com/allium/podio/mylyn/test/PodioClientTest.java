@@ -12,13 +12,16 @@ import java.util.List;
 import org.eclipse.mylyn.commons.net.WebLocation;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.internal.matchers.NotNull;
 
 import com.allium.podio.mylyn.core.PodioClient;
+import com.allium.podio.mylyn.core.podio.ex.SpaceMemberEx;
 import com.podio.app.ApplicationField;
 import com.podio.app.ApplicationMini;
 import com.podio.item.Item;
 import com.podio.item.ItemBadge;
 import com.podio.org.OrganizationWithSpaces;
+import com.podio.space.SpaceMember;
 import com.podio.space.SpaceMini;
 
 public class PodioClientTest {
@@ -29,7 +32,7 @@ public class PodioClientTest {
 		// client = PodioClient.getClient("guillez@gmail.com", "Guille!563");
 		// AbstractWebLocation location = new
 		// TaskRepositoryLocation(taskRepository);
-		client = new PodioClient(new WebLocation("podio.com", "guillez@gmail.com", "Guille!563"));
+		client = new PodioClient(new WebLocation("podio.com", "guillez@gmail.com", "Guille!563"), null);
 	}
 
 	@Test
@@ -96,6 +99,17 @@ public class PodioClientTest {
 
 		assertThat(item, notNullValue());
 		assertThat(item.getId(), not(nullValue()));
+	}
+	
+	@Test
+	public void testMembers() {
+		int spaceId = client.getOrgs().get(0).getSpaces().get(0).getId();
+		
+		List<SpaceMemberEx> members = client.getMembers(spaceId);
+
+		assertThat(members, notNullValue());
+		assertThat(members.size(), not(0));
+		assertThat(members.get(0).getUser().getName(), notNullValue());
 	}
 
 	/**

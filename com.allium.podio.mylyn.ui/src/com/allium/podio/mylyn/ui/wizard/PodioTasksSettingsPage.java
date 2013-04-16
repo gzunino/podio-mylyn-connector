@@ -5,8 +5,6 @@ import java.net.MalformedURLException;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.mylyn.commons.net.AuthenticationCredentials;
-import org.eclipse.mylyn.commons.net.AuthenticationType;
 import org.eclipse.mylyn.internal.tasks.core.IRepositoryConstants;
 import org.eclipse.mylyn.tasks.core.RepositoryStatus;
 import org.eclipse.mylyn.tasks.core.RepositoryTemplate;
@@ -122,7 +120,9 @@ public class PodioTasksSettingsPage extends AbstractRepositorySettingsPage {
 			try {
 				PodioRepositoryConnector connector = (PodioRepositoryConnector) TasksUi.getRepositoryManager()
 						.getRepositoryConnector(PodioPlugin.CONNECTOR_KIND);
-				PodioClient client = connector.getClientManager().getClient(repository);
+				
+				PodioClient client = connector.getClientManager().createClient(taskRepository, null);
+				
 				String status = client.connect();
 				setStatus(RepositoryStatus.createStatus(repositoryUrl, IStatus.INFO,
 						PodioUIPlugin.PLUGIN_ID,

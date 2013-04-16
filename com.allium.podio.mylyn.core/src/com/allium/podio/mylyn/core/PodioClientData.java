@@ -9,6 +9,7 @@ import com.podio.app.ApplicationField;
 import com.podio.app.ApplicationMini;
 import com.podio.item.Item;
 import com.podio.org.OrganizationWithSpaces;
+import com.podio.space.SpaceMember;
 
 public class PodioClientData implements Serializable {
 
@@ -17,4 +18,6 @@ public class PodioClientData implements Serializable {
 	final Map<Integer, List<ApplicationField>> cacheFields = new HashMap<Integer, List<ApplicationField>>();
 	final Map<Integer, List<ApplicationMini>> cacheApps = new HashMap<Integer, List<ApplicationMini>>();
 	final Map<Integer, Item> cacheItems = new HashMap<Integer, Item>();
+	final Map<Integer, List<? extends SpaceMember>> cacheMembers = new HashMap<Integer, List<? extends SpaceMember>>();
+	
 }

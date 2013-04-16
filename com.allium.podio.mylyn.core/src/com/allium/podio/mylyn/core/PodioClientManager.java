@@ -15,10 +15,10 @@ public class PodioClientManager extends RepositoryClientManager<PodioClient, Pod
 	}
 
 	@Override
-	protected PodioClient createClient(final TaskRepository taskRepository,
+	public PodioClient createClient(final TaskRepository taskRepository,
 			final PodioClientData data) {
 		AbstractWebLocation location = getLocationFactory().createWebLocation(taskRepository);
-		return new PodioClient(location);
+		return new PodioClient(location, data);
 	}
 
 }
